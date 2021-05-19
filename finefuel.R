@@ -1,9 +1,19 @@
+library(Hmisc)
+library(nlme)
+library(MuMIn)
+library(ggplot2)
+library(lme4)
+library(ggeffects)
+library(ez)
+library(dplyr)
+
 #import data
-data<-read.table("C:\\Users\\Tim\\Documents\\R\\finefuel.csv", header=T, sep=",")
+table <- "finefuel.csv"
+data<-read.table(table, header=T, sep=",")
 
 hist(data$Weight)
 
-treatment<-factor(treatment)
+#treatment<-factor(data$treatment)
 
 m1<-lm(Weight~treatment+map+mat+time_since_excl, data=data)
 summary(m1)
@@ -23,9 +33,6 @@ hist(resid(m1a))
 summary(m1a)
 
 #Run a mixed model using nlme package
-
-library(nlme)
-
 #Same fixed effects (predictors) as above, but now with Site as a random effect
 
 mm1<-lme(fixed = wttrans~treatment+map+mat+time_since_excl, data=data, random = ~ 1 | Site)
@@ -68,7 +75,7 @@ null<-lme(fixed = wttrans~1, data=data, random = ~ 1 | Site)
 hist(resid(mm1a))
 plot(resid(mm1a))
 
-library(MuMIn)
+#MuMin
 Cand.mods<- list(mm1a,mm2a,mm3a,mm4a,mm5a,mm6a,mm7a,mm8a,mm9a,mm10a,mm11a,mm12a,mm13a,mm14a,mm15a,null)
 aictab<- model.sel(Cand.mods)
 a<-as.data.frame(aictab)
@@ -148,7 +155,6 @@ mm28c<-lme(fixed = wttrans~ mz + map, data=data, random = ~ 1 | Site)
 mm29c<-lme(fixed = wttrans~ mat + map, data=data, random = ~ 1 | Site)
 mm30c<-lme(fixed = wttrans~ time_since_excl + map, data=data, random = ~ 1 | Site)
 
-library(MuMIn)
 Cand.modsc<- list(mm1c,mm2c,mm3c,mm4c,mm5c,mm6c,mm7c,mm8c,mm9c,mm10c,mm11c,mm12c,mm13c,mm14c,mm15c,
                   mm16c, mm17c, mm18c, mm19c, mm20c, mm21c, mm22c, mm23c, mm24c, mm25c, mm26c, mm27c,
                   mm28c, mm29c, mm30c, nullc, mm1d, mm2d, mm3d, mm4d, mm5d,
@@ -162,7 +168,6 @@ cor(fitted(mm11c), getResponse(mm11c))^2
 r.squaredGLMM(mm11c)
 
 ### plots
-library(ggplot2)
 
 ggplot(data, aes(x = mz, y = Weight, colour=treatment)) +
   geom_point(alpha = 0.3) +
@@ -179,68 +184,12 @@ ggplot(data, aes(map,Weight,group=treatment, colour=treatment)) +
   ylab("Fine Fuel Loading (Mg/ha)") +
   ggtitle("Fine Fuel Loading by Mean Annual Precipitation and Treatment")
 
-
 ### predicted model results
-library(ggplot2)
-library(lme4)
-library(ggeffects)
 mmmm<-lmer(Weight~treatment + mz + treatment:mz + ( 1 | Site), data=data)
-
-library(ez)
-
-rt_preds <- ezPredict(fit = mmmm, iterations = 10000)
-summary(rt_preds)
-f <- ezPlot2(CI=.95,
-             CI_alpha = 1,
-             preds = rt_preds,
-             x = mz,
-             split = treatment,
-             do_lines = FALSE) + geom_point(shape = 16, size = 2)+
-  geom_errorbar(stat="summary", fun.data="mean_se", size = 1.0,
-                width = 0.6, position=position_dodge(width=0.6))
-
-plot(f)
-summary(f)
-
-f +
-  theme_bw() + scale_color_grey(start = 0.2,end = 0.65) +
-  labs(y="Fine Fuel Loading (Mg/ha)", x = "Moisture Zone") +
-  theme(axis.title = element_text(size = rel(1.2))) +
-  scale_y_continuous(limits = c(0, 25)) +
-  theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))
-
-
-
-
-### actual data + SE bars
-g <- ggplot(data, aes(x = mz, y = Weight,
-                      color = treatment,
-                      group = treatment,
-                      fill = treatment,
-                      shape = treatment)) + 
-  geom_point(size = 1, alpha = 0.75, position = position_jitterdodge(dodge.width=0.6)) +
-  theme_bw() + scale_color_grey(start = 0.2,end = 0.65) +
-  labs(y="Fine Fuel Loading (Mg/ha)", x = "Moisture Zone") +
-  theme(axis.title = element_text(size = rel(1.2)))
-
-g + geom_errorbar(stat="summary", fun.data="mean_se", size = 1.0,
-                  width = 0.6, position=position_dodge(width=0.6)) +
-    scale_y_continuous(limits = c(0, 25)) + 
-    theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-          axis.title.y = element_text(margin = margin(t=0, r=10, b=0, l=0)))
-
-
-### predicted model results
-library(ggplot2)
-library(lme4)
-library(ggeffects)
-mmmm<-lmer(Weight~treatment + mz + treatment:mz + ( 1 | Site), data=data)
-
-library(ez)
 
 rt_preds <- ezPredict(fit = mmmm, iterations = 100)
 summary(rt_preds)
-f <- ezPlot2(CI=mean_se,
+f <- ezPlot2(CI=.95, #mean_se?
              CI_alpha = 1,
              preds = rt_preds,
              x = mz,
@@ -258,9 +207,6 @@ f +
   theme(axis.title = element_text(size = rel(1.2))) +
   scale_y_continuous(limits = c(0, 25)) +
   theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)))
-
-
-
 
 ### bootstrap predicted results
 boot<-as.data.frame(rt_preds)
@@ -279,7 +225,6 @@ g + geom_errorbar(stat="summary", fun.data="mean_cl_normal", size = 1.0,
   theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
         axis.title.y = element_text(margin = margin(t=0, r=10, b=0, l=0)))
 
-
 ### actual results + SE bars
 t <- ggplot(data, aes(x = mz, y = Weight,
                       color = treatment,
@@ -295,13 +240,8 @@ t + geom_errorbar(stat="summary", fun.data="mean_se", size = 1.0,
   theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
         axis.title.y = element_text(margin = margin(t=0, r=10, b=0, l=0)))
 
-
-  
 ### bar plot with means and SEs
-data(iris)
-summary(iris)
 summary(data)
-library(dplyr)
 data_summary <- data %>% # the names of the new data frame and the data frame to be summarised
   group_by(mz, treatment) %>%
   summarise(mean_PL = mean(Weight),  # calculates the mean of each group
@@ -325,3 +265,4 @@ p + geom_bar(stat = "identity",
   labs(x = "Moisture Zone", y = "Fine Fuel Loading (Mg/ha)") +
   ggtitle("Fine Fuel Loading by Moisture Zone and Treatment") +
   scale_fill_grey(name = "Treatment", start = .55, end =.8)
+
